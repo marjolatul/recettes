@@ -115,7 +115,6 @@ header {
 }
 .pill:hover { border-color: var(--terra); color: var(--terra); }
 .pill.active { background: var(--terra); border-color: var(--terra); color: #fff; }
-.pill.essai.active { background: var(--gold); border-color: var(--gold); color: #fff; }
 
 /* ── GRID ── */
 .grid {
@@ -154,14 +153,6 @@ header {
 .card-source { font-size: 12px; color: var(--muted); }
 .card-source a { color: var(--terra); text-decoration: none; }
 .card-source a:hover { text-decoration: underline; }
-
-.card-footer { display: flex; justify-content: flex-end; }
-.badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 400; letter-spacing: 0.04em;
-}
-.badge-essai { background: var(--gold-lt); color: var(--gold); }
-.badge-fait  { background: var(--sage-lt); color: var(--sage); }
 
 /* ── EMPTY ── */
 .empty {
@@ -275,22 +266,6 @@ header {
 .photo-drop-label { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
 .photo-drop-preview { width:100%; height:140px; object-fit:cover; border-radius:var(--radius); display:block; }
 
-.status-seg {
-  display: flex; border: 1px solid var(--border); border-radius: var(--radius);
-  overflow: hidden; width: fit-content; background: var(--cream);
-}
-.status-seg label { display: flex; cursor: pointer; }
-.status-seg input[type="radio"] { display: none; }
-.status-seg .seg-inner {
-  padding: 9px 18px; font-size: 12px; letter-spacing: 0.05em;
-  color: var(--muted); transition: all 0.15s; white-space: nowrap;
-  display: flex; align-items: center; gap: 5px;
-}
-.status-seg input[type="radio"]:checked + .seg-inner {
-  background: var(--terra); color: #fff;
-}
-.status-seg label:not(:last-child) { border-right: 1px solid var(--border); }
-
 .form-footer {
   display: flex; gap: 10px; justify-content: flex-end;
   padding: 0 32px 28px;
@@ -334,14 +309,7 @@ header {
       <span class="filter-label">Catégorie</span>
       <div id="catChips"></div>
     </div>
-    <div class="filter-row">
-      <span class="filter-label">Statut</span>
-      <div style="display:flex;gap:8px">
-        <div class="pill active" data-tried="all" onclick="setTried('all')">Toutes</div>
-        <div class="pill" data-tried="fait" onclick="setTried('fait')">✓ Déjà testées</div>
-        <div class="pill essai" data-tried="essai" onclick="setTried('essai')">✦ À essayer</div>
-      </div>
-    </div>
+
   </div>
 
   <div class="grid" id="grid"></div>
@@ -355,7 +323,6 @@ header {
     <div class="modal-inner">
       <div class="modal-eyebrow" id="vCat"></div>
       <div class="modal-title" id="vTitle"></div>
-      <div class="modal-badges" id="vBadges"></div>
       <div class="modal-source" id="vSource"></div>
       <div class="modal-notes" id="vNotes"></div>
       <div class="modal-actions" id="vActions"></div>
@@ -415,19 +382,6 @@ header {
         <textarea id="fInstructions" style="min-height:140px" placeholder="Étapes de la recette…"></textarea>
       </div>
       <div class="field">
-        <label>Statut</label>
-        <div class="status-seg">
-          <label>
-            <input type="radio" name="tried" id="fEssai" value="essai" checked>
-            <span class="seg-inner">✦ À essayer</span>
-          </label>
-          <label>
-            <input type="radio" name="tried" id="fFait" value="fait">
-            <span class="seg-inner">✓ Déjà testée</span>
-          </label>
-        </div>
-      </div>
-      <div class="field">
         <label>Photo</label>
         <div class="photo-drop" id="photoDropArea">
           <input type="file" accept="image/*" id="fPhoto" onchange="handlePhoto(this)" />
@@ -456,7 +410,6 @@ const CATS = ['Déjeuners','Apéro','Accompagnements','Conserves','Soupes','Plat
 let recipes = [];
 try { recipes = JSON.parse(localStorage.getItem('mesrecettes') || '[]'); } catch(e) { recipes = []; }
 let activeCat = 'all';
-let activeTried = 'all';
 let editingId = null;
 let pendingPhoto = null;
 
@@ -495,16 +448,10 @@ function setCat(v) {
   document.querySelectorAll('[data-cat]').forEach(c => c.classList.toggle('active', c.dataset.cat === v));
   renderCards();
 }
-function setTried(v) {
-  activeTried = v;
-  document.querySelectorAll('[data-tried]').forEach(c => c.classList.toggle('active', c.dataset.tried === v));
-  renderCards();
-}
 function getFiltered() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   return recipes.filter(r => {
     if (activeCat !== 'all' && r.cat !== activeCat) return false;
-    if (activeTried !== 'all' && r.tried !== activeTried) return false;
     if (q && !r.name.toLowerCase().includes(q) && !(r.source||'').toLowerCase().includes(q) && !(r.notes||'').toLowerCase().includes(q)) return false;
     return true;
   });
@@ -528,9 +475,6 @@ function renderCards() {
         ${r.cat ? `<div class="card-cat">${esc(r.cat)}</div>` : ''}
         <div class="card-name">${esc(r.name)}</div>
         ${r.source ? `<div class="card-source">${r.url ? `<a href="${esc(r.url)}" target="_blank" onclick="event.stopPropagation()">${esc(r.source)}</a>` : esc(r.source)}</div>` : ''}
-        <div class="card-footer">
-          ${r.tried==='fait' ? `<span class="badge badge-fait">✓ Testée</span>` : `<span class="badge badge-essai">✦ À essayer</span>`}
-        </div>
       </div>
     </div>`).join('');
 }
@@ -541,17 +485,12 @@ function openView(id) {
   document.getElementById('vImg').innerHTML = r.photo ? `<img src="${r.photo}" alt="${esc(r.name)}">` : '🍽';
   document.getElementById('vCat').textContent = r.cat || '';
   document.getElementById('vTitle').textContent = r.name;
-  document.getElementById('vBadges').innerHTML = r.tried==='fait'
-    ? `<span class="badge badge-fait">✓ Déjà testée</span>`
-    : `<span class="badge badge-essai">✦ À essayer</span>`;
 
-  // Source + ref + url
   let srcParts = [];
   if (r.source) srcParts.push(r.url ? `<a href="${esc(r.url)}" target="_blank">${esc(r.source)}</a>` : esc(r.source));
   if (r.ref) srcParts.push(`<span style="color:var(--muted)">${esc(r.ref)}</span>`);
   document.getElementById('vSource').innerHTML = srcParts.length ? srcParts.join(' &mdash; ') : '';
 
-  // Body: ingredients, instructions, notes
   let bodyHtml = '';
   if (r.ingredients) {
     bodyHtml += `<div class="modal-section-title">Ingrédients</div><div class="modal-recipe-text">${esc(r.ingredients)}</div>`;
@@ -567,7 +506,6 @@ function openView(id) {
   notesEl.style.display = bodyHtml ? '' : 'none';
 
   document.getElementById('vActions').innerHTML = `
-    <button class="btn btn-terra btn-sm" onclick="toggleTried('${esc(r.id)}')">${r.tried==='fait'?'✦ Marquer à essayer':'✓ Marquer comme testée'}</button>
     <button class="btn btn-outline btn-sm" onclick="openEdit('${esc(r.id)}')">Modifier</button>
     <button class="btn btn-danger-soft btn-sm" onclick="deleteRecipe('${esc(r.id)}')">Supprimer</button>`;
   document.getElementById('viewOverlay').classList.add('open');
@@ -575,11 +513,6 @@ function openView(id) {
 function closeViewOutside(e) { if(e.target===document.getElementById('viewOverlay')) closeViewDirect(); }
 function closeViewDirect() { document.getElementById('viewOverlay').classList.remove('open'); }
 
-function toggleTried(id) {
-  const r=recipes.find(x=>x.id===id); if(!r) return;
-  r.tried = r.tried==='fait'?'essai':'fait';
-  persist(); renderCards(); openView(id);
-}
 function deleteRecipe(id) {
   if(!confirm('Supprimer cette recette ?')) return;
   recipes=recipes.filter(r=>r.id!==id);
@@ -596,7 +529,6 @@ function resetForm() {
   document.getElementById('fIngredients').value='';
   document.getElementById('fInstructions').value='';
   document.getElementById('fNotes').value='';
-  document.getElementById('fEssai').checked=true;
   document.getElementById('fPhoto').value='';
   pendingPhoto=null;
   document.getElementById('photoPreviewWrap').innerHTML='<div style="font-size:26px;margin-bottom:6px">📷</div><div class="photo-drop-label">Cliquer pour ajouter une photo</div>';
@@ -620,7 +552,6 @@ function openEdit(id) {
   document.getElementById('fIngredients').value=r.ingredients||'';
   document.getElementById('fInstructions').value=r.instructions||'';
   document.getElementById('fNotes').value=r.notes||'';
-  document.getElementById(r.tried==='fait'?'fFait':'fEssai').checked=true;
   if(r.photo){ pendingPhoto=r.photo; document.getElementById('photoPreviewWrap').innerHTML=`<img src="${r.photo}" class="photo-drop-preview">`; }
   document.getElementById('formOverlay').classList.add('open');
 }
@@ -636,8 +567,7 @@ function handlePhoto(input) {
 function saveRecipe() {
   const name=document.getElementById('fName').value.trim();
   if(!name){ document.getElementById('fName').focus(); return; }
-  const tried=document.querySelector('input[name="tried"]:checked').value;
-  const data={ name, tried, cat:document.getElementById('fCat').value, source:document.getElementById('fSource').value.trim(), url:document.getElementById('fUrl').value.trim(), ref:document.getElementById('fRef').value.trim(), ingredients:document.getElementById('fIngredients').value.trim(), instructions:document.getElementById('fInstructions').value.trim(), notes:document.getElementById('fNotes').value.trim(), photo:pendingPhoto };
+  const data={ name, cat:document.getElementById('fCat').value, source:document.getElementById('fSource').value.trim(), url:document.getElementById('fUrl').value.trim(), ref:document.getElementById('fRef').value.trim(), ingredients:document.getElementById('fIngredients').value.trim(), instructions:document.getElementById('fInstructions').value.trim(), notes:document.getElementById('fNotes').value.trim(), photo:pendingPhoto };
   if(editingId){ Object.assign(recipes.find(x=>x.id===editingId), data); }
   else { recipes.unshift({id:'r'+Date.now(), created:Date.now(), ...data}); }
   persist(); renderCards(); closeFormDirect();
