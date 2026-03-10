@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -489,24 +490,28 @@ function openView(id) {
   document.getElementById('vCat').textContent = r.cat || '';
   document.getElementById('vTitle').textContent = r.name;
 
+  // Source line: name — ref — link
   let srcParts = [];
   if (r.source) srcParts.push(r.url ? `<a href="${esc(r.url)}" target="_blank">${esc(r.source)}</a>` : esc(r.source));
   if (r.ref) srcParts.push(`<span style="color:var(--muted)">${esc(r.ref)}</span>`);
+  if (r.url) srcParts.push(`<a href="${esc(r.url)}" target="_blank" style="color:var(--terra);white-space:nowrap">Voir la recette →</a>`);
   document.getElementById('vSource').innerHTML = srcParts.length ? srcParts.join(' &mdash; ') : '';
 
+  // Body content
   let bodyHtml = '';
   if (r.ingredients) {
     bodyHtml += `<div class="modal-section-title">Ingrédients</div><div class="modal-recipe-text">${esc(r.ingredients)}</div>`;
   }
   if (r.instructions) {
-    bodyHtml += `<div class="modal-section-title" style="margin-top:18px">Préparation</div><div class="modal-recipe-text">${esc(r.instructions)}</div>`;
+    bodyHtml += `<div class="modal-section-title" style="margin-top:20px">Préparation</div><div class="modal-recipe-text">${esc(r.instructions)}</div>`;
   }
   if (r.notes) {
-    bodyHtml += `<div class="modal-section-title" style="margin-top:18px;color:var(--muted)">Notes personnelles</div><div class="modal-recipe-text" style="color:var(--muted);font-style:italic">${esc(r.notes)}</div>`;
+    bodyHtml += `<div class="modal-section-title" style="margin-top:20px;color:var(--muted)">Notes personnelles</div><div class="modal-recipe-text" style="color:var(--muted);font-style:italic">${esc(r.notes)}</div>`;
   }
   const notesEl = document.getElementById('vNotes');
   notesEl.innerHTML = bodyHtml;
   notesEl.style.display = bodyHtml ? '' : 'none';
+  notesEl.style.borderTop = bodyHtml ? '' : 'none';
 
   document.getElementById('vActions').innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="openEdit('${esc(r.id)}')">Modifier</button>
