@@ -265,6 +265,15 @@ header {
 .photo-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width:100%; height:100%; }
 .photo-drop-label { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
 .photo-drop-preview { width:100%; height:140px; object-fit:cover; border-radius:var(--radius); display:block; }
+.photo-hint { font-size:11px; color:var(--muted); margin-top:5px; line-height:1.6; }
+.photo-hint em { font-style:normal; color:var(--terra); font-weight:500; }
+.photo-preview-img { width:100%; height:150px; object-fit:cover; border-radius:var(--radius); display:block; }
+.photo-hint { font-size:11px; color:var(--muted); margin-top:6px; line-height:1.6; }
+.photo-hint em { font-style:normal; color:var(--terra); font-weight:500; }
+.photo-preview-img { width:100%; height:150px; object-fit:cover; border-radius:var(--radius); display:block; }
+.photo-hint { font-size:11px; color:var(--muted); margin-top:6px; line-height:1.5; }
+.photo-hint em { font-style:normal; color:var(--terra); }
+.photo-preview-img { width:100%; height:140px; object-fit:cover; border-radius:var(--radius); display:block; }
 
 .form-footer {
   display: flex; gap: 10px; justify-content: flex-end;
@@ -367,7 +376,7 @@ header {
       </div>
       <div class="field">
         <label>URL (optionnel)</label>
-        <input id="fUrl" type="url" placeholder="https://…" />
+        <input id="fUrl" type="text" placeholder="https://…" />
       </div>
       <div class="field">
         <label>Référence dans le livre / magazine</label>
@@ -382,14 +391,10 @@ header {
         <textarea id="fInstructions" style="min-height:140px" placeholder="Étapes de la recette…"></textarea>
       </div>
       <div class="field">
-        <label>Photo</label>
-        <div class="photo-drop" id="photoDropArea">
-          <input type="file" accept="image/*" id="fPhoto" onchange="handlePhoto(this)" />
-          <div id="photoPreviewWrap">
-            <div style="font-size:26px;margin-bottom:6px">📷</div>
-            <div class="photo-drop-label">Cliquer pour ajouter une photo</div>
-          </div>
-        </div>
+        <label>Photo — lien Google Drive</label>
+        <input id="fPhotoUrl" type="text" placeholder="Coller le lien Google Drive ici…" oninput="previewDrivePhoto(this.value)" />
+        <div class="photo-hint">Dans Google Drive : clic droit sur la photo → <em>Obtenir le lien</em> → <em>Toute personne avec le lien</em> → Copier le lien</div>
+        <div id="photoPreviewWrap" style="margin-top:8px"></div>
       </div>
       <div class="field">
         <label>Notes personnelles</label>
@@ -412,8 +417,6 @@ try { recipes = JSON.parse(localStorage.getItem('mesrecettes') || '[]'); } catch
 let activeCat = 'all';
 let editingId = null;
 let pendingPhoto = null;
-
-function persist() { localStorage.setItem('mesrecettes', JSON.stringify(recipes)); }
 
 // ── SEED
 if (recipes.length === 0) {
@@ -529,9 +532,9 @@ function resetForm() {
   document.getElementById('fIngredients').value='';
   document.getElementById('fInstructions').value='';
   document.getElementById('fNotes').value='';
-  document.getElementById('fPhoto').value='';
+  const fpu = document.getElementById('fPhotoUrl'); if(fpu) fpu.value='';
   pendingPhoto=null;
-  document.getElementById('photoPreviewWrap').innerHTML='<div style="font-size:26px;margin-bottom:6px">📷</div><div class="photo-drop-label">Cliquer pour ajouter une photo</div>';
+  document.getElementById('photoPreviewWrap').innerHTML='';
 }
 function openAdd() {
   editingId=null; resetForm();
@@ -552,22 +555,37 @@ function openEdit(id) {
   document.getElementById('fIngredients').value=r.ingredients||'';
   document.getElementById('fInstructions').value=r.instructions||'';
   document.getElementById('fNotes').value=r.notes||'';
-  if(r.photo){ pendingPhoto=r.photo; document.getElementById('photoPreviewWrap').innerHTML=`<img src="${r.photo}" class="photo-drop-preview">`; }
+  if(r.photo){ pendingPhoto=r.photo; const fpu=document.getElementById('fPhotoUrl'); if(fpu) fpu.value=r.photo; document.getElementById('photoPreviewWrap').innerHTML=`<img src="${r.photo}" class="photo-preview-img">`; }
   document.getElementById('formOverlay').classList.add('open');
 }
-function handlePhoto(input) {
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    pendingPhoto=e.target.result;
-    document.getElementById('photoPreviewWrap').innerHTML=`<img src="${pendingPhoto}" class="photo-drop-preview">`;
-  };
-  reader.readAsDataURL(file);
+function driveUrlToImg(url) {
+  if (!url) return null;
+  url = url.trim();
+  var m = url.match(/[?&\/](?:id=|d\/)([a-zA-Z0-9_-]{20,})/);
+  if (m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w800';
+  return url;
+}
+function previewDrivePhoto(val) {
+  pendingPhoto = val.trim() ? driveUrlToImg(val.trim()) : null;
+  var wrap = document.getElementById('photoPreviewWrap');
+  if (pendingPhoto) {
+    wrap.innerHTML = '<img src="' + pendingPhoto + '" class="photo-preview-img" onerror="this.style.display=\'none\';this.parentNode.insertAdjacentHTML(\'afterbegin\',\'<span style=font-size:12px;color:#9a8e82>Aperçu non disponible — lien sauvegardé quand même.</span>\')" />';
+  } else {
+    wrap.innerHTML = '';
+  }
+}
+function persist() {
+  try {
+    localStorage.setItem('mesrecettes', JSON.stringify(recipes));
+  } catch(e) {
+    alert('Espace de stockage plein.');
+  }
 }
 function saveRecipe() {
   const name=document.getElementById('fName').value.trim();
   if(!name){ document.getElementById('fName').focus(); return; }
-  const data={ name, cat:document.getElementById('fCat').value, source:document.getElementById('fSource').value.trim(), url:document.getElementById('fUrl').value.trim(), ref:document.getElementById('fRef').value.trim(), ingredients:document.getElementById('fIngredients').value.trim(), instructions:document.getElementById('fInstructions').value.trim(), notes:document.getElementById('fNotes').value.trim(), photo:pendingPhoto };
+  var photoVal = pendingPhoto || (document.getElementById('fPhotoUrl') ? driveUrlToImg(document.getElementById('fPhotoUrl').value.trim()) : null);
+  const data={ name, cat:document.getElementById('fCat').value, source:document.getElementById('fSource').value.trim(), url:document.getElementById('fUrl').value.trim(), ref:document.getElementById('fRef').value.trim(), ingredients:document.getElementById('fIngredients').value.trim(), instructions:document.getElementById('fInstructions').value.trim(), notes:document.getElementById('fNotes').value.trim(), photo:photoVal };
   if(editingId){ Object.assign(recipes.find(x=>x.id===editingId), data); }
   else { recipes.unshift({id:'r'+Date.now(), created:Date.now(), ...data}); }
   persist(); renderCards(); closeFormDirect();
